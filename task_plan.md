@@ -7,8 +7,8 @@ Build the approved native Cordis standalone `dsh-wallpaper` plugin, including se
 - [x] Phase 1 — Recover context, inspect the approved spec, and map the DSH/Cordis plugin conventions.
 - [x] Phase 2 — Write the detailed implementation plan under `docs/superpowers/plans/`.
 - [x] Phase 3 — Prepare an isolated plugin workspace and verify the baseline.
-- [ ] Phase 4 — Implement backend persistence, validation, routes, and AI tool permissions with TDD. *(in progress)*
-- [ ] Phase 5 — Implement and integrate the wallpaper settings UI and global background layer with TDD.
+- [x] Phase 4 — Implement backend persistence, validation, routes, and AI tool permissions with TDD.
+- [ ] Phase 5 — Implement and integrate the wallpaper settings UI and global background layer with TDD. *(in progress)*
 - [ ] Phase 6 — Run security, switching, persistence, build, uninstall-safety, and UI verification.
 - [ ] Phase 7 — Review the completed branch and present integration options.
 

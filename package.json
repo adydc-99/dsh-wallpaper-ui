@@ -47,8 +47,8 @@
     "build": "pnpm run clean && pnpm run typecheck && tsdown",
     "clean": "node -e \"require('node:fs').rmSync('lib',{recursive:true,force:true})\"",
     "typecheck": "tsc -p tsconfig.json",
-    "test": "vitest run",
-    "test:coverage": "vitest run --coverage",
+    "test": "node --test tests/package-contract.test.mjs && vitest run --exclude tests/package-contract.test.mjs",
+    "test:coverage": "node --test tests/package-contract.test.mjs && vitest run --coverage --exclude tests/package-contract.test.mjs",
     "prepare": "pnpm run build"
   },
   "dependencies": {

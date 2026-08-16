@@ -4,7 +4,7 @@ import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 import type { ToolDefinition } from '@deepseek-ai/dsh-tools'
 import { WallpaperService } from '../src/service.ts'
-import { createWallpaperToolDefinitions } from '../src/tools.ts'
+import { createWallpaperToolDefinitions, registerWallpaperTools } from '../src/tools.ts'
 
 const roots: string[] = []
 
@@ -58,5 +58,18 @@ describe('model tool permission surface', () => {
     const apply = tools.find(tool => tool.name === 'wallpaper_apply')!
     const schema = JSON.stringify(apply.parameters)
     expect(schema).not.toMatch(/delete|upload|url|path/i)
+  })
+
+  it('rolls back an earlier registration when a later tool collides', async () => {
+    const { service } = await fixture()
+    const registered = new Set<string>()
+    expect(() => registerWallpaperTools({
+      register(definition) {
+        if (definition.name === 'wallpaper_apply') throw new Error('duplicate tool')
+        registered.add(definition.name)
+        return () => { registered.delete(definition.name) }
+      },
+    }, service)).toThrow('duplicate tool')
+    expect(registered).toEqual(new Set())
   })
 })

@@ -25,3 +25,5 @@
 - Completed service RED→GREEN: 7 persistence/mutation tests cover restart, corrupt fallback, write failure preservation, active deletion, file removal, temp-path containment, unknown IDs, and unsubscribe; combined core suite is 33/33 with strict typecheck.
 - Completed model-tool RED→GREEN: 5 tests prove the only tools are list/apply, list hides paths/URLs, apply validates existing IDs, and no destructive/source-creation parameters exist; strict typecheck passes.
 - Completed HTTP RED→GREEN: 6 tests cover state/no-store, foreign-Origin rejection, no-download URL registration, disguised-script rejection, manual activate/update/reset/delete operations, and SSE state propagation; strict typecheck passes.
+- Completed Cordis Host bootstrap RED→GREEN: exact service injection, Harness-home private-root resolution, 100 MiB default, route/tool lifecycle cleanup, and partial tool-registration rollback are covered.
+- Corrected the mixed Node-test/Vitest runner so the full backend suite executes both groups; 49 tests pass (2 package-contract + 47 Vitest).

@@ -95,6 +95,12 @@ export interface ToolRegistry {
 
 /** Register both tools and return one disposer. */
 export function registerWallpaperTools(registry: ToolRegistry, service: WallpaperService): () => void {
-  const disposers = createWallpaperToolDefinitions(service).map(definition => registry.register(definition))
+  const disposers: Array<() => void> = []
+  try {
+    for (const definition of createWallpaperToolDefinitions(service)) disposers.push(registry.register(definition))
+  } catch (error) {
+    for (const dispose of disposers.reverse()) dispose()
+    throw error
+  }
   return () => { for (const dispose of disposers.reverse()) dispose() }
 }
