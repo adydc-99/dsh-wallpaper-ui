@@ -1,4 +1,4 @@
-import { useEffect, useRef, useSyncExternalStore, type CSSProperties } from 'react'
+import { useEffect, useRef, useState, useSyncExternalStore, type CSSProperties } from 'react'
 import { createPortal } from 'react-dom'
 import type { ThemeTokenOverrides } from '@deepseek-ai/dsh-client-ui-theme/client'
 import type { PresentationSettings, WallpaperFit, WallpaperMediaType, WallpaperRecord, WallpaperState } from '../contracts.ts'
@@ -25,21 +25,74 @@ function videoFit(fit: WallpaperFit): CSSProperties['objectFit'] {
   return fit
 }
 
+function useReducedMotion(): boolean {
+  const query = '(prefers-reduced-motion: reduce)'
+  const [reduced, setReduced] = useState(() => typeof window !== 'undefined'
+    && typeof window.matchMedia === 'function'
+    && window.matchMedia(query).matches)
+  useEffect(() => {
+    if (typeof window.matchMedia !== 'function') return
+    const media = window.matchMedia(query)
+    const changed = (event: MediaQueryListEvent): void => { setReduced(event.matches) }
+    media.addEventListener('change', changed)
+    setReduced(media.matches)
+    return () => { media.removeEventListener('change', changed) }
+  }, [])
+  return reduced
+}
+
+function ImageWallpaper(props: {
+  source: string
+  mediaType: WallpaperMediaType
+  fit: WallpaperFit
+  onMediaError: (mediaType: WallpaperMediaType) => void
+}) {
+  useEffect(() => {
+    if (props.fit !== 'tile') return
+    const probe = new Image()
+    probe.onerror = () => { props.onMediaError(props.mediaType) }
+    probe.src = props.source
+    return () => { probe.onerror = null; probe.src = '' }
+  }, [props.fit, props.mediaType, props.onMediaError, props.source])
+  if (props.fit === 'tile') {
+    return <div style={{ width: '100%', height: '100%', backgroundImage: `url(${JSON.stringify(props.source)})`, ...fitBackgroundStyle('tile') }} />
+  }
+  return (
+    <img
+      src={props.source}
+      alt=""
+      onError={() => { props.onMediaError(props.mediaType) }}
+      style={{ width: '100%', height: '100%', objectFit: videoFit(props.fit), objectPosition: 'center' }}
+    />
+  )
+}
+
 function VideoWallpaper(props: {
   source: string
   mediaType: WallpaperMediaType
   presentation: PresentationSettings
+  reduceMotion: boolean
   onMediaError: (mediaType: WallpaperMediaType) => void
 }) {
   const ref = useRef<HTMLVideoElement>(null)
+  const previousReducedMotion = useRef(props.reduceMotion)
   useEffect(() => {
     if (ref.current !== null) ref.current.playbackRate = props.presentation.playbackRate
   }, [props.presentation.playbackRate])
+  useEffect(() => {
+    if (ref.current === null || previousReducedMotion.current === props.reduceMotion) return
+    previousReducedMotion.current = props.reduceMotion
+    if (props.reduceMotion) ref.current.pause()
+    else {
+      const playback = ref.current.play()
+      if (playback !== undefined) void playback.catch(() => undefined)
+    }
+  }, [props.reduceMotion])
   return (
     <video
       ref={ref}
       src={props.source}
-      autoPlay
+      autoPlay={!props.reduceMotion}
       loop
       playsInline
       muted={props.presentation.muted}
@@ -52,6 +105,7 @@ function VideoWallpaper(props: {
 
 /** Pure visual surface rendered into the document-owned bottom layer. */
 export function WallpaperSurface(props: { state: WallpaperState; onMediaError: (mediaType: WallpaperMediaType) => void }) {
+  const reduceMotion = useReducedMotion()
   const { presentation } = props.state
   if (!presentation.enabled || presentation.selectedId === null) return null
   const record = props.state.wallpapers.find(item => item.id === presentation.selectedId)
@@ -61,13 +115,16 @@ export function WallpaperSurface(props: { state: WallpaperState; onMediaError: (
     position: 'absolute',
     inset: presentation.blurPx > 0 ? `-${String(presentation.blurPx * 2)}px` : 0,
     filter: `brightness(${String(presentation.brightness)}) blur(${String(presentation.blurPx)}px)`,
+    opacity: presentation.opacity,
   }
   return (
-    <div aria-hidden="true" style={{ position: 'absolute', inset: 0, overflow: 'hidden', opacity: presentation.opacity }}>
+    <div aria-hidden="true" style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
       <div style={mediaStyle}>
         {record.mediaType.startsWith('video/')
-          ? <VideoWallpaper source={source} mediaType={record.mediaType} presentation={presentation} onMediaError={props.onMediaError} />
-          : <div style={{ width: '100%', height: '100%', backgroundImage: `url(${JSON.stringify(source)})`, ...fitBackgroundStyle(presentation.fit) }} />}
+          ? <VideoWallpaper source={source} mediaType={record.mediaType} presentation={presentation} reduceMotion={reduceMotion} onMediaError={props.onMediaError} />
+          : reduceMotion && record.mediaType === 'image/gif'
+            ? <div data-reduced-motion-fallback="true" style={{ width: '100%', height: '100%' }} />
+            : <ImageWallpaper source={source} mediaType={record.mediaType} fit={presentation.fit} onMediaError={props.onMediaError} />}
       </div>
       <div style={{ position: 'absolute', inset: 0, background: presentation.overlayColor, opacity: presentation.overlayOpacity }} />
     </div>
@@ -131,7 +188,7 @@ export function WallpaperPortal(props: { controller: WallpaperClientController; 
   const snapshot = useSyncExternalStore(props.controller.subscribe, props.controller.getSnapshot, props.controller.getSnapshot)
   if (snapshot.state === null) return null
   return createPortal(
-    <WallpaperSurface state={snapshot.state} onMediaError={mediaType => { void props.controller.handleMediaError(mediaType) }} />,
+    <WallpaperSurface state={snapshot.state} onMediaError={mediaType => { void props.controller.handleMediaError(mediaType).catch(() => undefined) }} />,
     props.target,
   )
 }

@@ -26,7 +26,22 @@ export async function startWallpaperClient(services: WallpaperClientServices): P
   })
   const layer = installWallpaperDocumentLayer(services.document)
   const disposeStyles = installWallpaperStyles(services.document)
-  let disposeTheme = services.theme.overrideTokens('dsh-wallpaper', panelThemeTokens(0.86))
+  let disposeTheme: (() => void) | undefined
+  let disposeSettings: (() => void) | undefined
+  let disposeOverlay: (() => void) | undefined
+  let unsubscribeTheme: (() => void) | undefined
+  let disposed = false
+  const cleanup = async (): Promise<void> => {
+    if (disposed) return
+    disposed = true
+    disposeOverlay?.()
+    disposeSettings?.()
+    unsubscribeTheme?.()
+    disposeTheme?.()
+    controller.dispose()
+    disposeStyles()
+    layer.dispose()
+  }
   let lastPanelOpacity = 0.86
   const updateTheme = (): void => {
     const opacity = controller.getSnapshot().state?.presentation.panelOpacity
@@ -34,31 +49,27 @@ export async function startWallpaperClient(services: WallpaperClientServices): P
     lastPanelOpacity = opacity
     disposeTheme = services.theme.overrideTokens('dsh-wallpaper', panelThemeTokens(opacity))
   }
-  const unsubscribeTheme = controller.subscribe(updateTheme)
-
-  const disposeSettings = services.slots.inject('settings.section', () => services.slots.register({
-    name: 'settings.section',
-    id: 'wallpaper',
-    order: 45,
-    label: '壁纸',
-    inject: () => ({ controller }),
-  }, WallpaperSettings))
-  const disposeOverlay = services.slots.inject('shell.overlay', () => services.slots.register({
-    name: 'shell.overlay',
-    id: 'dsh-wallpaper-renderer',
-    order: -100,
-    inject: () => ({ controller, target: layer.element }),
-  }, WallpaperPortal))
-
-  await controller.start().catch(() => undefined)
-  return async () => {
-    disposeOverlay()
-    disposeSettings()
-    unsubscribeTheme()
-    disposeTheme()
-    controller.dispose()
-    disposeStyles()
-    layer.dispose()
+  try {
+    disposeTheme = services.theme.overrideTokens('dsh-wallpaper', panelThemeTokens(0.86))
+    unsubscribeTheme = controller.subscribe(updateTheme)
+    disposeSettings = services.slots.inject('settings.section', () => services.slots.register({
+      name: 'settings.section',
+      id: 'wallpaper',
+      order: 45,
+      label: '壁纸',
+      inject: () => ({ controller }),
+    }, WallpaperSettings))
+    disposeOverlay = services.slots.inject('shell.overlay', () => services.slots.register({
+      name: 'shell.overlay',
+      id: 'dsh-wallpaper-renderer',
+      order: -100,
+      inject: () => ({ controller, target: layer.element }),
+    }, WallpaperPortal))
+    await controller.start().catch(() => undefined)
+    return cleanup
+  } catch (error) {
+    await cleanup()
+    throw error
   }
 }
 

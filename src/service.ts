@@ -25,6 +25,7 @@ export interface WallpaperServiceOptions {
   logger?: WallpaperServiceLogger
   now?: () => Date
   id?: () => string
+  readState?: (path: string) => Promise<string>
   writeState?: (path: string, contents: string) => Promise<void>
 }
 
@@ -81,6 +82,7 @@ export class WallpaperService {
   private readonly logger: WallpaperServiceLogger
   private readonly now: () => Date
   private readonly id: () => string
+  private readonly readState: (path: string) => Promise<string>
   private readonly writeState: (path: string, contents: string) => Promise<void>
   private state = createDefaultState()
   private listeners = new Set<(state: WallpaperState) => void>()
@@ -94,6 +96,7 @@ export class WallpaperService {
     this.logger = options.logger ?? { warn() {} }
     this.now = options.now ?? (() => new Date())
     this.id = options.id ?? randomUUID
+    this.readState = options.readState ?? (path => readFile(path, 'utf8'))
     this.writeState = options.writeState ?? (async (path, contents) => {
       await writeFileAtomic(path, contents, { encoding: 'utf8', mode: 0o600 })
     })
@@ -105,13 +108,29 @@ export class WallpaperService {
       mkdir(this.mediaRoot, { recursive: true, mode: 0o700 }),
       mkdir(this.tempRoot, { recursive: true, mode: 0o700 }),
     ])
+    let raw: string
     try {
-      const raw = await readFile(this.configPath, 'utf8')
-      this.state = parseState(JSON.parse(raw))
+      raw = await this.readState(this.configPath)
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === 'ENOENT') return
-      this.logger.warn(error)
-      this.state = createDefaultState()
+      throw error
+    }
+    let decoded: unknown
+    try {
+      decoded = JSON.parse(raw)
+    } catch (error) {
+      await this.quarantineCorruptConfig(error)
+      return
+    }
+    if (typeof decoded === 'object' && decoded !== null
+      && typeof (decoded as { version?: unknown }).version === 'number'
+      && (decoded as { version: number }).version > 1) {
+      throw new TypeError('unsupported wallpaper state version')
+    }
+    try {
+      this.state = parseState(decoded)
+    } catch (error) {
+      await this.quarantineCorruptConfig(error)
     }
   }
 
@@ -260,6 +279,14 @@ export class WallpaperService {
     const record = this.state.wallpapers.find(item => item.id === id)
     if (record === undefined) throw new Error(`unknown wallpaper id: ${id}`)
     return record
+  }
+
+  private async quarantineCorruptConfig(error: unknown): Promise<void> {
+    const stamp = this.now().toISOString().replace(/[^0-9A-Z]/giu, '')
+    const backup = join(this.root, `config.corrupt-${stamp}-${randomUUID()}.json`)
+    await rename(this.configPath, backup)
+    this.logger.warn(error)
+    this.state = createDefaultState()
   }
 
   private uploadPath(record: UploadedWallpaperRecord): string {

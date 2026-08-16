@@ -18,6 +18,18 @@ function json(res: ServerResponse, status: number, value: unknown): void {
   res.end(JSON.stringify(value))
 }
 
+function publicError(message: string, status: number): string {
+  if (status === 413) return '文件超过允许的大小上限'
+  if (/signature/iu.test(message)) return '文件内容与声明的媒体格式不一致'
+  if (/extension/iu.test(message)) return '不支持该文件扩展名，或扩展名与格式不一致'
+  if (/MIME/iu.test(message)) return '文件 MIME 类型与扩展名不一致'
+  if (/remote URL/iu.test(message)) return '网络壁纸 URL 必须是有效且不含凭据的 HTTP(S) 地址'
+  if (/unknown wallpaper/iu.test(message)) return '指定的壁纸不存在'
+  if (/selection/iu.test(message)) return '请先选择一张壁纸'
+  if (/display|unsupported|between|boolean/iu.test(message)) return '壁纸显示参数无效'
+  return '壁纸请求无效'
+}
+
 async function readJson(req: IncomingMessage, limit = 64 * 1024): Promise<unknown> {
   const chunks: Buffer[] = []
   let size = 0
@@ -36,7 +48,20 @@ function mutationAllowed(req: IncomingMessage): boolean {
   const origin = req.headers.origin
   const host = req.headers.host
   if (origin === undefined || host === undefined) return false
-  try { return new URL(origin).host === host } catch { return false }
+  try {
+    const parsedOrigin = new URL(origin)
+    const parsedHost = new URL(`http://${host}`)
+    const hostname = parsedOrigin.hostname.toLowerCase()
+    const loopbackAuthority = hostname === 'localhost'
+      || hostname === '127.0.0.1'
+      || hostname === '[::1]'
+      || hostname === '[::ffff:127.0.0.1]'
+    return loopbackAuthority
+      && (parsedOrigin.protocol === 'http:' || parsedOrigin.protocol === 'https:')
+      && parsedOrigin.host.toLowerCase() === parsedHost.host.toLowerCase()
+  } catch {
+    return false
+  }
 }
 
 async function upload(req: IncomingMessage, service: WallpaperService, limit: number): Promise<unknown> {
@@ -143,7 +168,7 @@ export function registerWallpaperRoutes(options: WallpaperRouteOptions): () => v
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error)
         const status = /signature|extension|MIME/iu.test(message) ? 415 : /size limit|too large/iu.test(message) ? 413 : 400
-        json(res, status, { error: message })
+        json(res, status, { error: publicError(message, status) })
       }
     },
   }

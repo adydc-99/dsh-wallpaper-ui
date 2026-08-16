@@ -54,6 +54,7 @@ describe('WallpaperClientController', () => {
       { url: '/dsh-wallpaper/api/wallpapers/wall-1', method: 'DELETE' },
       { url: '/dsh-wallpaper/api/reset', method: 'POST' },
     ])
+    expect(controller.getSnapshot().error).toBe('壁纸媒体加载失败，已恢复默认背景')
   })
 
   it('reports a failed request without discarding the last good state', async () => {

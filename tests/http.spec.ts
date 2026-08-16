@@ -1,4 +1,4 @@
-import { createServer, type Server } from 'node:http'
+import { createServer, request, type Server } from 'node:http'
 import { mkdtemp, readdir, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -55,6 +55,26 @@ describe('wallpaper HTTP surface', () => {
     expect(response.status).toBe(403)
   })
 
+  it('rejects DNS-rebinding-style matching attacker Host and Origin headers', async () => {
+    const { origin, service } = await fixture()
+    const body = JSON.stringify({ name: '攻击者', url: 'https://example.test/a.webp', mediaType: 'image/webp' })
+    const status = await new Promise<number | undefined>((resolve, reject) => {
+      const outgoing = request(`${origin}/dsh-wallpaper/api/urls`, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          'content-length': Buffer.byteLength(body),
+          host: 'attacker.test',
+          origin: 'http://attacker.test',
+        },
+      }, response => { response.resume(); response.once('end', () => { resolve(response.statusCode) }) })
+      outgoing.once('error', reject)
+      outgoing.end(body)
+    })
+    expect(status).toBe(403)
+    expect(service.snapshot().wallpapers).toEqual([])
+  })
+
   it('adds an HTTP URL without fetching it on the Host', async () => {
     const { origin, service } = await fixture()
     const response = await fetch(`${origin}/dsh-wallpaper/api/urls`, {
@@ -73,6 +93,7 @@ describe('wallpaper HTTP surface', () => {
     form.append('file', new Blob(['<script>alert(1)</script>'], { type: 'image/png' }), 'fake.png')
     const response = await fetch(`${origin}/dsh-wallpaper/api/uploads`, { method: 'POST', headers: { origin }, body: form })
     expect(response.status).toBe(415)
+    expect(await response.json()).toEqual({ error: '文件内容与声明的媒体格式不一致' })
     expect(service.snapshot().wallpapers).toEqual([])
     expect(await readdir(join(root, 'media'))).toEqual([])
   })
@@ -98,6 +119,7 @@ describe('wallpaper HTTP surface', () => {
     form.append('file', new Blob([oversized], { type: 'image/png' }), 'large.png')
     const response = await fetch(`${origin}/dsh-wallpaper/api/uploads`, { method: 'POST', headers: { origin }, body: form })
     expect(response.status).toBe(413)
+    expect(await response.json()).toEqual({ error: '文件超过允许的大小上限' })
     expect(service.snapshot().wallpapers).toEqual([])
     expect(await readdir(join(root, '.tmp'))).toEqual([])
     expect(await readdir(join(root, 'media'))).toEqual([])

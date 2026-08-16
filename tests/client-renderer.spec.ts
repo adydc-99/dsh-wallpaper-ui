@@ -60,7 +60,9 @@ describe('wallpaper rendering helpers', () => {
       wallpapers: [{ id: 'gif', name: '动画', source: 'url', url: 'https://example.test/a.gif', mediaType: 'image/gif', createdAt: '2026-08-16T00:00:00.000Z' }],
       presentation: { ...base.presentation, enabled: true, selectedId: 'gif' },
     }
-    expect(renderToStaticMarkup(createElement(WallpaperSurface, { state: gif, onMediaError: vi.fn() }))).toContain('a.gif')
+    const gifMarkup = renderToStaticMarkup(createElement(WallpaperSurface, { state: gif, onMediaError: vi.fn() }))
+    expect(gifMarkup).toContain('<img')
+    expect(gifMarkup).toContain('a.gif')
 
     const video: WallpaperState = {
       ...gif,
@@ -76,6 +78,49 @@ describe('wallpaper rendering helpers', () => {
     expect(onMediaError).toHaveBeenCalledWith('video/webm')
     await act(async () => { root.unmount() })
     target.remove()
+  })
+
+  it('suppresses animated GIF media when reduced motion is requested', () => {
+    const original = window.matchMedia
+    window.matchMedia = vi.fn().mockReturnValue({
+      matches: true,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    })
+    const base = createDefaultState()
+    const state: WallpaperState = {
+      ...base,
+      wallpapers: [{ id: 'gif', name: '动画', source: 'url', url: 'https://example.test/a.gif', mediaType: 'image/gif', createdAt: '2026-08-16T00:00:00.000Z' }],
+      presentation: { ...base.presentation, enabled: true, selectedId: 'gif' },
+    }
+    const markup = renderToStaticMarkup(createElement(WallpaperSurface, { state, onMediaError: vi.fn() }))
+    expect(markup).toContain('data-reduced-motion-fallback="true"')
+    expect(markup).not.toContain('<img')
+    window.matchMedia = original
+  })
+
+  it('reacts when reduced-motion preference changes while a GIF is mounted', async () => {
+    const original = window.matchMedia
+    let changed: ((event: { matches: boolean }) => void) | undefined
+    window.matchMedia = vi.fn().mockReturnValue({
+      matches: false,
+      addEventListener: (_name: string, listener: (event: { matches: boolean }) => void) => { changed = listener },
+      removeEventListener: vi.fn(),
+    })
+    const base = createDefaultState()
+    const state: WallpaperState = {
+      ...base,
+      wallpapers: [{ id: 'gif', name: '动画', source: 'url', url: 'https://example.test/a.gif', mediaType: 'image/gif', createdAt: '2026-08-16T00:00:00.000Z' }],
+      presentation: { ...base.presentation, enabled: true, selectedId: 'gif' },
+    }
+    const target = document.createElement('div')
+    const root = createRoot(target)
+    await act(async () => { root.render(createElement(WallpaperSurface, { state, onMediaError: vi.fn() })) })
+    expect(target.querySelector('img')).not.toBeNull()
+    await act(async () => { changed?.({ matches: true }) })
+    expect(target.querySelector('[data-reduced-motion-fallback]')).not.toBeNull()
+    await act(async () => { root.unmount() })
+    window.matchMedia = original
   })
 
   it('builds light and dark translucent panel tokens from the saved opacity', () => {

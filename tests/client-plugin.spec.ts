@@ -55,4 +55,29 @@ describe('client plugin lifecycle', () => {
     expect(stream.close).toHaveBeenCalledOnce()
     expect(themeDisposers.at(-1)).toHaveBeenCalledOnce()
   })
+
+  it('rolls back document, theme, and the first slot if the second registration fails', async () => {
+    document.body.innerHTML = '<div id="root" style="position:absolute"></div>'
+    const settingsDispose = vi.fn()
+    const themeDispose = vi.fn()
+    await expect(startWallpaperClient({
+      document,
+      fetcher: vi.fn(),
+      eventSource: () => new FakeEventSource() as unknown as EventSource,
+      slots: {
+        inject(key, callback) {
+          if (key === 'shell.overlay') throw new Error('overlay collision')
+          callback()
+          return settingsDispose
+        },
+        register() { return vi.fn() },
+      },
+      theme: { overrideTokens() { return themeDispose } },
+    })).rejects.toThrow('overlay collision')
+    expect(settingsDispose).toHaveBeenCalledOnce()
+    expect(themeDispose).toHaveBeenCalledOnce()
+    expect(document.querySelector('[data-dsh-wallpaper-layer]')).toBeNull()
+    expect(document.querySelector('[data-dsh-wallpaper-styles]')).toBeNull()
+    expect(document.querySelector<HTMLElement>('#root')!.style.position).toBe('absolute')
+  })
 })

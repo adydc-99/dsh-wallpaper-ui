@@ -96,8 +96,9 @@ export class WallpaperClientController {
     await this.mutate('/api/reset', { method: 'POST' })
   }
 
-  async handleMediaError(mediaType: WallpaperMediaType): Promise<void> {
-    if (mediaType.startsWith('video/')) await this.reset()
+  async handleMediaError(_mediaType: WallpaperMediaType): Promise<void> {
+    await this.reset()
+    this.publish({ ...this.snapshot, status: 'error', error: '壁纸媒体加载失败，已恢复默认背景' })
   }
 
   private async mutate(path: string, init: RequestInit): Promise<void> {
@@ -122,7 +123,13 @@ export class WallpaperClientController {
   private async errorMessage(response: Response): Promise<string> {
     try {
       const body = await response.json() as { error?: unknown }
-      if (typeof body.error === 'string') return body.error
+      if (typeof body.error === 'string') {
+        if (/size limit|too large/iu.test(body.error)) return '文件超过允许的大小上限'
+        if (/signature/iu.test(body.error)) return '文件内容与声明的媒体格式不一致'
+        if (/extension/iu.test(body.error)) return '不支持该文件扩展名，或扩展名与格式不一致'
+        if (/MIME/iu.test(body.error)) return '文件 MIME 类型与扩展名不一致'
+        return body.error
+      }
     } catch {}
     return `壁纸请求失败（HTTP ${String(response.status)}）`
   }

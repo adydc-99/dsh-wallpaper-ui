@@ -1,4 +1,4 @@
-import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises'
+import { mkdtemp, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -45,6 +45,28 @@ describe('WallpaperService persistence', () => {
 
     expect(service.snapshot()).toEqual({ version: 1, revision: 0, wallpapers: [], presentation: DEFAULT_PRESENTATION })
     expect(warn).toHaveBeenCalledOnce()
+    const files = await readdir(root)
+    expect(files).not.toContain('config.json')
+    const backup = files.find(file => file.startsWith('config.corrupt-'))
+    expect(backup).toBeDefined()
+    expect(await readFile(join(root, backup!), 'utf8')).toBe('{not-json')
+  })
+
+  it('fails closed on a future state version without changing its file', async () => {
+    const root = await tempRoot()
+    const future = JSON.stringify({ version: 2, revision: 0, wallpapers: [], presentation: DEFAULT_PRESENTATION })
+    await mkdir(root, { recursive: true })
+    await writeFile(join(root, 'config.json'), future, 'utf8')
+    const service = new WallpaperService({ root })
+    await expect(service.init()).rejects.toThrow(/unsupported.*version/i)
+    expect(await readFile(join(root, 'config.json'), 'utf8')).toBe(future)
+  })
+
+  it('fails closed when configuration cannot be read', async () => {
+    const root = await tempRoot()
+    const failure = Object.assign(new Error('access denied'), { code: 'EACCES' })
+    const service = new WallpaperService({ root, readState: async () => { throw failure } })
+    await expect(service.init()).rejects.toBe(failure)
   })
 
   it('keeps the previous state active when an atomic write fails', async () => {
