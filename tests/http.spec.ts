@@ -77,6 +77,32 @@ describe('wallpaper HTTP surface', () => {
     expect(await readdir(join(root, 'media'))).toEqual([])
   })
 
+  it('streams a valid upload into private media storage', async () => {
+    const { origin, root, service } = await fixture()
+    const png = Buffer.from('89504e470d0a1a0a0000000d4948445200000001000000010806000000', 'hex')
+    const form = new FormData()
+    form.append('file', new Blob([png], { type: 'image/png' }), 'pixel.png')
+    const response = await fetch(`${origin}/dsh-wallpaper/api/uploads`, { method: 'POST', headers: { origin }, body: form })
+    expect(response.status).toBe(201)
+    expect(service.snapshot().wallpapers).toMatchObject([{ source: 'upload', mediaType: 'image/png' }])
+    expect(await readdir(join(root, 'media'))).toEqual(['wall-one.png'])
+  })
+
+  it('returns 413 and removes temporary data after the upload ceiling is crossed', async () => {
+    const { origin, root, service } = await fixture()
+    const oversized = Buffer.concat([
+      Buffer.from('89504e470d0a1a0a0000000d4948445200000001000000010806000000', 'hex'),
+      Buffer.alloc(2048),
+    ])
+    const form = new FormData()
+    form.append('file', new Blob([oversized], { type: 'image/png' }), 'large.png')
+    const response = await fetch(`${origin}/dsh-wallpaper/api/uploads`, { method: 'POST', headers: { origin }, body: form })
+    expect(response.status).toBe(413)
+    expect(service.snapshot().wallpapers).toEqual([])
+    expect(await readdir(join(root, '.tmp'))).toEqual([])
+    expect(await readdir(join(root, 'media'))).toEqual([])
+  })
+
   it('activates, updates, resets, and manually deletes an existing wallpaper', async () => {
     const { origin, service } = await fixture()
     await service.addRemote({ name: '远程', url: 'https://example.test/a.webp', mediaType: 'image/webp' })

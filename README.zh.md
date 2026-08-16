@@ -1,0 +1,47 @@
+# dsh-wallpaper
+
+这是一个原生、独立的 Cordis bundle，为 DeepSeek Harness Web UI 提供可持久保存的图片、GIF 与视频壁纸。
+
+## 环境要求
+
+- DeepSeek Harness `0.1.0-rc.6`
+- Node.js `^22.19.0 || >=24.0.0`
+- Web profile（客户端部分只在浏览器中运行）
+
+## 从当前项目安装
+
+```sh
+pnpm install
+pnpm build
+dsh plugin --profile web add .
+dsh --profile web --dump-config
+dsh --profile web
+```
+
+启动后打开“设置 → 壁纸”。本地上传支持 JPG、PNG、WebP、GIF、MP4、WebM，单文件上限为 100 MiB。网络壁纸只接受 HTTP(S) URL，并由浏览器直接加载，Host 不会代为下载。
+
+卸载命令：
+
+```sh
+dsh plugin --profile web remove dsh-wallpaper
+```
+
+卸载会移除路由、AI 工具、设置入口、主题覆盖、样式表和全局背景层。壁纸库仍保留在 `$DSH_HOME/plugins/dsh-wallpaper/v1`，只有用户手动删除该目录时才会清除。
+
+## 安全边界
+
+- 上传文件先流式写入插件私有临时目录；扩展名、声明 MIME 和文件头检测结果三者一致时才会入库。
+- 所有写操作必须来自回环连接，并携带与 Host 一致的 `Origin`。
+- AI 仅能调用 `wallpaper_list` 和 `wallpaper_apply`；不能上传、添加 URL 或删除壁纸。
+- URL 仅允许 HTTP(S)，不得包含用户名或密码，且 Host 不下载其内容。
+- 视频壁纸加载失败时会恢复默认显示参数，不影响聊天功能。
+
+## 开发验证
+
+```sh
+pnpm test
+pnpm typecheck
+pnpm build
+pnpm pack --dry-run
+```
+

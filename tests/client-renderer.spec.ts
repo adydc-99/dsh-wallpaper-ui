@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server'
-import { createElement } from 'react'
+import { createRoot } from 'react-dom/client'
+import { act, createElement } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 import { createDefaultState, type WallpaperState } from '../src/contracts.ts'
 import {
@@ -50,6 +51,31 @@ describe('wallpaper rendering helpers', () => {
     expect(markup).toContain('autoplay=""')
     expect(markup).toContain('loop=""')
     expect(markup).toContain('data-playback-rate="1.5"')
+  })
+
+  it('switches from GIF image rendering to video and wires video errors to fallback', async () => {
+    const base = createDefaultState()
+    const gif: WallpaperState = {
+      ...base,
+      wallpapers: [{ id: 'gif', name: '动画', source: 'url', url: 'https://example.test/a.gif', mediaType: 'image/gif', createdAt: '2026-08-16T00:00:00.000Z' }],
+      presentation: { ...base.presentation, enabled: true, selectedId: 'gif' },
+    }
+    expect(renderToStaticMarkup(createElement(WallpaperSurface, { state: gif, onMediaError: vi.fn() }))).toContain('a.gif')
+
+    const video: WallpaperState = {
+      ...gif,
+      wallpapers: [{ id: 'video', name: '视频', source: 'url', url: 'https://example.test/a.webm', mediaType: 'video/webm', createdAt: '2026-08-16T00:00:00.000Z' }],
+      presentation: { ...gif.presentation, selectedId: 'video' },
+    }
+    const target = document.createElement('div')
+    document.body.append(target)
+    const onMediaError = vi.fn()
+    const root = createRoot(target)
+    await act(async () => { root.render(createElement(WallpaperSurface, { state: video, onMediaError })) })
+    target.querySelector('video')!.dispatchEvent(new Event('error', { bubbles: true }))
+    expect(onMediaError).toHaveBeenCalledWith('video/webm')
+    await act(async () => { root.unmount() })
+    target.remove()
   })
 
   it('builds light and dark translucent panel tokens from the saved opacity', () => {

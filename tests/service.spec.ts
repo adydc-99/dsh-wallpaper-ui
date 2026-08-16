@@ -60,6 +60,17 @@ describe('WallpaperService persistence', () => {
 })
 
 describe('WallpaperService mutations', () => {
+  it('rejects an unsupported media type at the service trust boundary', async () => {
+    const root = await tempRoot()
+    const service = await makeService(root)
+    await expect(service.addRemote({
+      name: '脚本',
+      url: 'https://example.test/payload.svg',
+      mediaType: 'image/svg+xml' as never,
+    })).rejects.toThrow(/media.?type/i)
+    expect(service.snapshot().wallpapers).toEqual([])
+  })
+
   it('disables before deleting the active uploaded wallpaper and removes its file', async () => {
     const root = await tempRoot()
     const service = await makeService(root, { root, id: () => 'upload-one' })

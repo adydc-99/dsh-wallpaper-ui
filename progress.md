@@ -29,3 +29,6 @@
 - Corrected the mixed Node-test/Vitest runner so the full backend suite executes both groups; 49 tests pass (2 package-contract + 47 Vitest).
 - Completed browser controller, bottom-layer renderer, settings page, theme-token integration, and client lifecycle with TDD. The client covers upload/URL/library actions, six formats, five fit modes, all presentation controls, SSE sync, video fallback, pointer-through layering, and clean uninstall.
 - Production build succeeds and emits a 32.66 kB browser bundle (7.83 kB gzip); the complete suite is 60/60 (2 Node contract + 58 Vitest).
+- Expanded the security/switching suite with a real valid upload, 413 temporary-file cleanup, service-level media-type rejection, GIF→video rendering, and dispatched video-error fallback; coverage now runs 64 tests total with 86.29% line coverage.
+- `pnpm audit --prod` reports no known vulnerabilities; `pnpm pack --dry-run` contains only the expected bundle, builds, declarations, license, changelog, and bilingual READMEs.
+- Completed an actual `@deepseek-ai/dsh@0.1.0-rc.6` smoke test in an isolated Harness home: bundle install, composed config, Web boot, `/dsh-wallpaper/api/state`, HTML client-module inclusion, plugin removal, and post-removal config all passed.
