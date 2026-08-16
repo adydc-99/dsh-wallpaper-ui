@@ -27,3 +27,5 @@
 - Completed HTTP RED→GREEN: 6 tests cover state/no-store, foreign-Origin rejection, no-download URL registration, disguised-script rejection, manual activate/update/reset/delete operations, and SSE state propagation; strict typecheck passes.
 - Completed Cordis Host bootstrap RED→GREEN: exact service injection, Harness-home private-root resolution, 100 MiB default, route/tool lifecycle cleanup, and partial tool-registration rollback are covered.
 - Corrected the mixed Node-test/Vitest runner so the full backend suite executes both groups; 49 tests pass (2 package-contract + 47 Vitest).
+- Completed browser controller, bottom-layer renderer, settings page, theme-token integration, and client lifecycle with TDD. The client covers upload/URL/library actions, six formats, five fit modes, all presentation controls, SSE sync, video fallback, pointer-through layering, and clean uninstall.
+- Production build succeeds and emits a 32.66 kB browser bundle (7.83 kB gzip); the complete suite is 60/60 (2 Node contract + 58 Vitest).
