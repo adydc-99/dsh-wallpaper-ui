@@ -22,3 +22,4 @@
 - Observed the package-contract RED test, added the minimal standalone manifest/build entries, and diagnosed the first build failure to local Node's missing native TS config support plus tsdown's optional `unrun` loader.
 - Added explicit `unrun`, rebuilt successfully, and observed both package-contract tests pass (2/2).
 - Completed validation RED→GREEN: 26 tests now cover six formats, extension/MIME/signature agreement, HTTP(S)-only URLs, bounded display patches, safe defaults, v0 migration, and relative upload paths; strict typecheck passes.
+- Completed service RED→GREEN: 7 persistence/mutation tests cover restart, corrupt fallback, write failure preservation, active deletion, file removal, temp-path containment, unknown IDs, and unsubscribe; combined core suite is 33/33 with strict typecheck.
