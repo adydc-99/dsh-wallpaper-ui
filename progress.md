@@ -23,3 +23,4 @@
 - Added explicit `unrun`, rebuilt successfully, and observed both package-contract tests pass (2/2).
 - Completed validation RED→GREEN: 26 tests now cover six formats, extension/MIME/signature agreement, HTTP(S)-only URLs, bounded display patches, safe defaults, v0 migration, and relative upload paths; strict typecheck passes.
 - Completed service RED→GREEN: 7 persistence/mutation tests cover restart, corrupt fallback, write failure preservation, active deletion, file removal, temp-path containment, unknown IDs, and unsubscribe; combined core suite is 33/33 with strict typecheck.
+- Completed model-tool RED→GREEN: 5 tests prove the only tools are list/apply, list hides paths/URLs, apply validates existing IDs, and no destructive/source-creation parameters exist; strict typecheck passes.
