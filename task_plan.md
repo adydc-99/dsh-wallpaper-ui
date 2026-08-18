@@ -10,7 +10,7 @@ Build the approved native Cordis standalone `dsh-wallpaper` plugin, including se
 - [x] Phase 4 — Implement backend persistence, validation, routes, and AI tool permissions with TDD.
 - [x] Phase 5 — Implement and integrate the wallpaper settings UI and global background layer with TDD.
 - [x] Phase 6 — Run security, switching, persistence, build, uninstall-safety, and UI verification.
-- [ ] Phase 7 — Review the completed branch and present integration options. *(final security re-review in progress)*
+- [x] Phase 7 — Review the completed branch and present integration options.
 
 ## Decisions
 - The approved design is authoritative; no online store, scraping, schedules, or Agent-state switching in v1.
