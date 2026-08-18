@@ -4,6 +4,7 @@ export interface WallpaperClientSnapshot {
   status: 'idle' | 'loading' | 'ready' | 'error'
   state: WallpaperState | null
   error: string | null
+  uploadLimitBytes: number
 }
 
 export interface WallpaperClientOptions {
@@ -18,6 +19,7 @@ export interface RemoteWallpaperInput {
 }
 
 const API_ROOT = '/dsh-wallpaper'
+const DEFAULT_UPLOAD_LIMIT_BYTES = 100 * 1024 * 1024
 
 /** Browser-side state bridge over the plugin's same-origin HTTP and SSE surface. */
 export class WallpaperClientController {
@@ -25,7 +27,7 @@ export class WallpaperClientController {
   private readonly eventSource: (url: string) => EventSource
   private readonly listeners = new Set<() => void>()
   private stream: EventSource | null = null
-  private snapshot: WallpaperClientSnapshot = { status: 'idle', state: null, error: null }
+  private snapshot: WallpaperClientSnapshot = { status: 'idle', state: null, error: null, uploadLimitBytes: DEFAULT_UPLOAD_LIMIT_BYTES }
 
   constructor(options: WallpaperClientOptions = {}) {
     this.fetcher = options.fetcher ?? fetch
@@ -43,12 +45,15 @@ export class WallpaperClientController {
     if (this.stream !== null) return
     this.publish({ ...this.snapshot, status: 'loading', error: null })
     try {
-      const state = await this.readState(await this.fetcher(`${API_ROOT}/api/state`))
-      this.publish({ status: 'ready', state, error: null })
+      const response = await this.fetcher(`${API_ROOT}/api/state`)
+      const state = await this.readState(response)
+      const configuredLimit = Number(response.headers.get('x-dsh-wallpaper-upload-limit'))
+      const uploadLimitBytes = Number.isSafeInteger(configuredLimit) && configuredLimit > 0 ? configuredLimit : DEFAULT_UPLOAD_LIMIT_BYTES
+      this.publish({ status: 'ready', state, error: null, uploadLimitBytes })
       const stream = this.eventSource(`${API_ROOT}/events`)
       stream.onmessage = event => {
         try {
-          this.publish({ status: 'ready', state: JSON.parse(event.data) as WallpaperState, error: null })
+          this.publish({ status: 'ready', state: JSON.parse(event.data) as WallpaperState, error: null, uploadLimitBytes: this.snapshot.uploadLimitBytes })
         } catch {
           this.publish({ ...this.snapshot, status: 'error', error: '壁纸状态更新格式无效' })
         }
@@ -107,7 +112,7 @@ export class WallpaperClientController {
       if (!response.ok) throw new Error(await this.errorMessage(response))
       if (response.status !== 204 && response.headers.get('content-type')?.includes('application/json') === true) {
         const value = await response.json() as unknown
-        if (this.isState(value)) this.publish({ status: 'ready', state: value, error: null })
+        if (this.isState(value)) this.publish({ status: 'ready', state: value, error: null, uploadLimitBytes: this.snapshot.uploadLimitBytes })
       }
     } catch (error) {
       this.fail(error)

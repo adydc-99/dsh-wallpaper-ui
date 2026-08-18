@@ -2,10 +2,14 @@ import { useRef, useState, useSyncExternalStore, type ChangeEvent, type FormEven
 import type { SettingsSectionOwnerProps } from '@deepseek-ai/dsh-client-ui-settings/client'
 import type { DisplayPatch, WallpaperFit, WallpaperMediaType, WallpaperRecord } from '../contracts.ts'
 import type { WallpaperClientController } from './controller.ts'
-import { wallpaperSource } from './renderer.tsx'
+import { useReducedMotion, wallpaperSource } from './renderer.tsx'
 
 const ACCEPTED_FILES = '.jpg,.jpeg,.png,.webp,.gif,.mp4,.webm,image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm'
-const MAX_UPLOAD_BYTES = 100 * 1024 * 1024
+
+function formatBytes(value: number): string {
+  const mebibytes = value / (1024 * 1024)
+  return `${Number.isInteger(mebibytes) ? String(mebibytes) : mebibytes.toFixed(1)} MiB`
+}
 
 export interface WallpaperSettingsInjected {
   controller: WallpaperClientController
@@ -19,13 +23,16 @@ function mediaLabel(type: WallpaperMediaType): string {
 
 function WallpaperCard(props: { record: WallpaperRecord; active: boolean; busy: boolean; controller: WallpaperClientController }) {
   const source = wallpaperSource(props.record)
+  const reduceMotion = useReducedMotion()
   const remove = async (): Promise<void> => {
     if (globalThis.confirm?.(`删除壁纸“${props.record.name}”？`) === false) return
     await props.controller.remove(props.record.id)
   }
   return (
     <article className="dsh-wallpaper-card" data-active={props.active}>
-      {props.record.mediaType.startsWith('video/')
+      {reduceMotion && props.record.mediaType === 'image/gif'
+        ? <div className="dsh-wallpaper-preview dsh-wallpaper-preview-paused" data-reduced-motion-fallback="true">动画已暂停</div>
+        : props.record.mediaType.startsWith('video/')
         ? <video className="dsh-wallpaper-preview" src={source} muted playsInline preload="metadata" />
         : <img className="dsh-wallpaper-preview" src={source} alt="" loading="lazy" />}
       <div className="dsh-wallpaper-card-body">
@@ -70,7 +77,7 @@ export function WallpaperSettings(props: WallpaperSettingsProps) {
     const file = event.target.files?.[0]
     event.target.value = ''
     if (file === undefined) return
-    if (file.size > MAX_UPLOAD_BYTES) { setLocalError('单个文件不能超过 100 MB'); return }
+    if (file.size > snapshot.uploadLimitBytes) { setLocalError(`单个文件不能超过 ${formatBytes(snapshot.uploadLimitBytes)}`); return }
     void perform(() => controller.upload(file))
   }
   const addUrl = (event: FormEvent): void => {
@@ -93,7 +100,7 @@ export function WallpaperSettings(props: WallpaperSettingsProps) {
       {error !== null && <div className="dsh-wallpaper-status" data-error="true" role="alert">{error}</div>}
 
       <div className="dsh-wallpaper-source-grid">
-        <div className="dsh-wallpaper-source"><h3>上传本地文件</h3><p className="dsh-wallpaper-muted">JPG、PNG、WebP、GIF、MP4 或 WebM，单文件最大 100 MB。</p><button className="dsh-wallpaper-button" type="button" data-primary="true" disabled={busy} onClick={() => { uploadInput.current?.click() }}>选择文件</button><input ref={uploadInput} hidden type="file" accept={ACCEPTED_FILES} disabled={busy} onChange={upload} /></div>
+        <div className="dsh-wallpaper-source"><h3>上传本地文件</h3><p className="dsh-wallpaper-muted">JPG、PNG、WebP、GIF、MP4 或 WebM，单文件最大 {formatBytes(snapshot.uploadLimitBytes)}。</p><button className="dsh-wallpaper-button" type="button" data-primary="true" disabled={busy} onClick={() => { uploadInput.current?.click() }}>选择文件</button><input ref={uploadInput} hidden type="file" accept={ACCEPTED_FILES} disabled={busy} onChange={upload} /></div>
         <form className="dsh-wallpaper-source" onSubmit={addUrl}><h3>添加网络 URL</h3><p className="dsh-wallpaper-muted">保存后浏览器会直接访问该地址，远程站点可能看到你的 IP 地址与浏览器信息。</p><div className="dsh-wallpaper-source-row"><label className="dsh-wallpaper-field">名称（可选）<input className="dsh-wallpaper-input" value={urlName} onChange={event => { setUrlName(event.target.value) }} /></label><label className="dsh-wallpaper-field">格式<select className="dsh-wallpaper-select" value={urlType} onChange={event => { setUrlType(event.target.value as WallpaperMediaType) }}><option value="image/jpeg">JPG</option><option value="image/png">PNG</option><option value="image/webp">WebP</option><option value="image/gif">GIF</option><option value="video/mp4">MP4</option><option value="video/webm">WebM</option></select></label></div><div className="dsh-wallpaper-source-row"><label className="dsh-wallpaper-field">HTTP(S) 地址<input className="dsh-wallpaper-input" type="url" required placeholder="https://…" value={url} onChange={event => { setUrl(event.target.value) }} /></label><button className="dsh-wallpaper-button" data-primary="true" disabled={busy || url.trim() === ''}>添加</button></div></form>
       </div>
 

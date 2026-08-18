@@ -1,5 +1,5 @@
 import { createServer, request, type Server } from 'node:http'
-import { mkdtemp, readdir, rm } from 'node:fs/promises'
+import { mkdtemp, readdir, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
@@ -31,6 +31,18 @@ async function fixture() {
   return { root, service, origin, dispose }
 }
 
+async function attackerGet(origin: string, path: string): Promise<{ status: number | undefined; body: string }> {
+  return await new Promise((resolve, reject) => {
+    const outgoing = request(`${origin}${path}`, { headers: { host: 'attacker.test' } }, response => {
+      const chunks: Buffer[] = []
+      response.on('data', chunk => { chunks.push(Buffer.from(chunk)) })
+      response.once('end', () => { resolve({ status: response.statusCode, body: Buffer.concat(chunks).toString('utf8') }) })
+    })
+    outgoing.once('error', reject)
+    outgoing.end()
+  })
+}
+
 afterEach(async () => {
   await Promise.all(servers.splice(0).map(server => new Promise<void>(resolve => server.close(() => resolve()))))
   await Promise.all(roots.splice(0).map(root => rm(root, { recursive: true, force: true })))
@@ -43,6 +55,7 @@ describe('wallpaper HTTP surface', () => {
     expect(response.status).toBe(200)
     expect(await response.json()).toMatchObject({ version: 1, wallpapers: [] })
     expect(response.headers.get('cache-control')).toBe('no-store')
+    expect(response.headers.get('x-dsh-wallpaper-upload-limit')).toBe('1024')
   })
 
   it('rejects a mutation with a foreign Origin', async () => {
@@ -73,6 +86,21 @@ describe('wallpaper HTTP surface', () => {
     })
     expect(status).toBe(403)
     expect(service.snapshot().wallpapers).toEqual([])
+  })
+
+  it('rejects attacker Host reads of state, SSE, and private uploaded media', async () => {
+    const { origin, service } = await fixture()
+    const tempPath = join(service.tempRoot, 'private.png')
+    await writeFile(tempPath, Buffer.from('89504e470d0a1a0a', 'hex'))
+    await service.commitUpload({ tempPath, name: '私密文件', mediaType: 'image/png', extension: '.png' })
+    await service.addRemote({ name: '私密链接', url: 'https://example.test/image.png?token=secret', mediaType: 'image/png' })
+
+    for (const path of ['/dsh-wallpaper/api/state', '/dsh-wallpaper/events', '/dsh-wallpaper/media/wall-one']) {
+      const response = await attackerGet(origin, path)
+      expect(response.status, path).toBe(403)
+      expect(response.body, path).not.toContain('token=secret')
+      expect(response.body, path).not.toContain('89504e47')
+    }
   })
 
   it('adds an HTTP URL without fetching it on the Host', async () => {

@@ -25,7 +25,7 @@ function videoFit(fit: WallpaperFit): CSSProperties['objectFit'] {
   return fit
 }
 
-function useReducedMotion(): boolean {
+export function useReducedMotion(): boolean {
   const query = '(prefers-reduced-motion: reduce)'
   const [reduced, setReduced] = useState(() => typeof window !== 'undefined'
     && typeof window.matchMedia === 'function'

@@ -13,8 +13,8 @@ import { validateUploadHeader } from './validation.ts'
 interface WebServerLike { register(route: WebRoute): () => void }
 export interface WallpaperRouteOptions { webServer: WebServerLike; service: WallpaperService; uploadLimitBytes: number }
 
-function json(res: ServerResponse, status: number, value: unknown): void {
-  res.writeHead(status, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' })
+function json(res: ServerResponse, status: number, value: unknown, headers: Record<string, string> = {}): void {
+  res.writeHead(status, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store', ...headers })
   res.end(JSON.stringify(value))
 }
 
@@ -42,21 +42,33 @@ async function readJson(req: IncomingMessage, limit = 64 * 1024): Promise<unknow
   return JSON.parse(Buffer.concat(chunks).toString('utf8'))
 }
 
-function mutationAllowed(req: IncomingMessage): boolean {
+function literalLoopbackHostname(hostname: string): boolean {
+  const value = hostname.toLowerCase()
+  return value === 'localhost' || value === '127.0.0.1' || value === '[::1]'
+}
+
+function loopbackAuthorityAllowed(req: IncomingMessage): boolean {
   const remote = req.socket.remoteAddress
   if (remote !== '127.0.0.1' && remote !== '::1' && remote !== '::ffff:127.0.0.1') return false
+  const host = req.headers.host
+  if (host === undefined) return false
+  try {
+    const parsedHost = new URL(`http://${host}`)
+    return literalLoopbackHostname(parsedHost.hostname)
+  } catch {
+    return false
+  }
+}
+
+function mutationAllowed(req: IncomingMessage): boolean {
+  if (!loopbackAuthorityAllowed(req)) return false
   const origin = req.headers.origin
   const host = req.headers.host
   if (origin === undefined || host === undefined) return false
   try {
     const parsedOrigin = new URL(origin)
     const parsedHost = new URL(`http://${host}`)
-    const hostname = parsedOrigin.hostname.toLowerCase()
-    const loopbackAuthority = hostname === 'localhost'
-      || hostname === '127.0.0.1'
-      || hostname === '[::1]'
-      || hostname === '[::ffff:127.0.0.1]'
-    return loopbackAuthority
+    return literalLoopbackHostname(parsedOrigin.hostname)
       && (parsedOrigin.protocol === 'http:' || parsedOrigin.protocol === 'https:')
       && parsedOrigin.host.toLowerCase() === parsedHost.host.toLowerCase()
   } catch {
@@ -121,7 +133,11 @@ export function registerWallpaperRoutes(options: WallpaperRouteOptions): () => v
       const url = new URL(req.url ?? '/', 'http://dsh.local')
       const path = url.pathname.slice('/dsh-wallpaper'.length)
       try {
-        if (req.method === 'GET' && path === '/api/state') { json(res, 200, service.snapshot()); return }
+        if (!loopbackAuthorityAllowed(req)) { json(res, 403, { error: 'forbidden' }); return }
+        if (req.method === 'GET' && path === '/api/state') {
+          json(res, 200, service.snapshot(), { 'x-dsh-wallpaper-upload-limit': String(options.uploadLimitBytes) })
+          return
+        }
         if (req.method === 'GET' && path === '/events') {
           res.writeHead(200, { 'content-type': 'text/event-stream', 'cache-control': 'no-store', connection: 'keep-alive' })
           sse.add(res)

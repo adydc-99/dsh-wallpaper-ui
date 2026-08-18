@@ -56,7 +56,7 @@ Back up `$DSH_HOME/plugins/dsh-wallpaper/v1` to preserve the library and present
 ## Security model
 
 - Uploads are streamed into a plugin-private temporary directory and admitted only when extension, declared MIME type, and detected file signature agree.
-- Mutating HTTP routes require a loopback connection and a same-origin `Origin` header.
+- Every plugin route accepts only a literal loopback Host over a loopback connection; mutating routes additionally require a matching same-origin `Origin` header. Access DSH through `localhost`, `127.0.0.1`, or `[::1]` when this plugin is enabled.
 - The model can call only `wallpaper_list` and `wallpaper_apply`. It cannot upload, add URLs, or delete entries.
 - URL sources must use HTTP(S), cannot contain credentials, and are never downloaded by the Host.
 - A failed video wallpaper resets presentation settings without affecting chat.

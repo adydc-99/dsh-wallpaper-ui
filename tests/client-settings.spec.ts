@@ -56,6 +56,17 @@ describe('WallpaperSettings', () => {
     controller.dispose()
   })
 
+  it('does not animate GIF previews when reduced motion is requested', async () => {
+    vi.stubGlobal('matchMedia', vi.fn(() => ({ matches: true, addEventListener: vi.fn(), removeEventListener: vi.fn() })))
+    const controller = await readyController('image')
+    const state = controller.getSnapshot().state!
+    state.wallpapers[0] = { ...state.wallpapers[0]!, mediaType: 'image/gif', url: 'https://example.test/animated.gif' }
+    const markup = renderToStaticMarkup(createElement(WallpaperSettings, { controller, close: vi.fn() }))
+    expect(markup).toContain('data-reduced-motion-fallback="true"')
+    expect(markup).not.toContain('<img class="dsh-wallpaper-preview" src="https://example.test/animated.gif"')
+    controller.dispose()
+  })
+
   it('owns and removes one stylesheet without leaking on uninstall', () => {
     const dispose = installWallpaperStyles(document)
     expect(document.querySelectorAll('style[data-dsh-wallpaper-styles]')).toHaveLength(1)

@@ -56,7 +56,7 @@ dsh plugin --profile web remove dsh-wallpaper
 ## 安全边界
 
 - 上传文件先流式写入插件私有临时目录；扩展名、声明 MIME 和文件头检测结果三者一致时才会入库。
-- 所有写操作必须来自回环连接，并携带与 Host 一致的 `Origin`。
+- 插件的所有路由都只接受回环连接上的字面回环 Host；写操作还必须携带与 Host 一致的同源 `Origin`。启用本插件时，请通过 `localhost`、`127.0.0.1` 或 `[::1]` 访问 DSH。
 - AI 仅能调用 `wallpaper_list` 和 `wallpaper_apply`；不能上传、添加 URL 或删除壁纸。
 - URL 仅允许 HTTP(S)，不得包含用户名或密码，且 Host 不下载其内容。
 - 视频壁纸加载失败时会恢复默认显示参数，不影响聊天功能。

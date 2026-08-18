@@ -10,7 +10,7 @@ Build the approved native Cordis standalone `dsh-wallpaper` plugin, including se
 - [x] Phase 4 — Implement backend persistence, validation, routes, and AI tool permissions with TDD.
 - [x] Phase 5 — Implement and integrate the wallpaper settings UI and global background layer with TDD.
 - [x] Phase 6 — Run security, switching, persistence, build, uninstall-safety, and UI verification.
-- [ ] Phase 7 — Review the completed branch and present integration options. *(in progress)*
+- [ ] Phase 7 — Review the completed branch and present integration options. *(final security re-review in progress)*
 
 ## Decisions
 - The approved design is authoritative; no online store, scraping, schedules, or Agent-state switching in v1.
@@ -29,3 +29,4 @@ Build the approved native Cordis standalone `dsh-wallpaper` plugin, including se
 | Tool parameter DSL rejected raw JSON Schema `minimum`/`maximum`/`pattern` keys. | 1 | Keep bounds in model descriptions and enforce them at the existing `validateDisplayPatch` execution boundary; the DSH parameter DSL intentionally exposes a smaller key set. |
 | Official `dsh plugin add` split the workspace path at its space and installed `deepseek` plus `harness` as separate specs. | 1 | Repeated the isolated smoke test through a verified no-space temporary junction; installation, boot, API, client-module discovery, and removal then passed. |
 | PowerShell removal of isolated smoke directories/junction was blocked by the execution safety policy after path verification. | 2 | Left the three explicitly named items under the OS temp directory; no workspace or user project data was touched. |
+| The first packed-smoke HTTP check assigned to PowerShell's reserved `$HOME` variable (case-insensitive). | 1 | Renamed the response variable to `$pageResponse`; the API and client-module checks then passed. |

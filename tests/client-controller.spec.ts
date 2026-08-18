@@ -14,14 +14,14 @@ describe('WallpaperClientController', () => {
     const stream = new FakeEventSource()
     const fetcher = vi.fn().mockResolvedValue(new Response(JSON.stringify(createDefaultState()), {
       status: 200,
-      headers: { 'content-type': 'application/json' },
+      headers: { 'content-type': 'application/json', 'x-dsh-wallpaper-upload-limit': '2048' },
     }))
     const controller = new WallpaperClientController({ fetcher, eventSource: () => stream as unknown as EventSource })
     const changed = vi.fn()
     controller.subscribe(changed)
 
     await controller.start()
-    expect(controller.getSnapshot()).toMatchObject({ status: 'ready', state: { revision: 0 } })
+    expect(controller.getSnapshot()).toMatchObject({ status: 'ready', state: { revision: 0 }, uploadLimitBytes: 2048 })
     const pushed = { ...createDefaultState(), revision: 1, presentation: { ...createDefaultState().presentation, opacity: 0.4 } }
     stream.onmessage?.(new MessageEvent('message', { data: JSON.stringify(pushed) }))
     expect(controller.getSnapshot()).toMatchObject({ state: { revision: 1, presentation: { opacity: 0.4 } } })
