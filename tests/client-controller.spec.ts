@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createDefaultState } from '../src/contracts.ts'
 import { WallpaperClientController } from '../src/client/controller.ts'
 
@@ -9,7 +9,22 @@ class FakeEventSource {
   close = vi.fn()
 }
 
+afterEach(() => { vi.unstubAllGlobals() })
+
 describe('WallpaperClientController', () => {
+  it('preserves the Window receiver required by the default browser fetch', async () => {
+    const browserFetch = vi.fn(function (this: unknown) {
+      if (this !== globalThis) throw new TypeError('Illegal invocation')
+      return Promise.resolve(new Response(JSON.stringify(createDefaultState()), { status: 200 }))
+    })
+    vi.stubGlobal('fetch', browserFetch)
+    const controller = new WallpaperClientController({ eventSource: () => new FakeEventSource() as unknown as EventSource })
+
+    await expect(controller.start()).resolves.toBeUndefined()
+    expect(browserFetch).toHaveBeenCalledOnce()
+    controller.dispose()
+  })
+
   it('loads once, accepts SSE updates, and closes the stream', async () => {
     const stream = new FakeEventSource()
     const fetcher = vi.fn().mockResolvedValue(new Response(JSON.stringify(createDefaultState()), {

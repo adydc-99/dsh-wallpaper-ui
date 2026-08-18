@@ -30,7 +30,7 @@ export class WallpaperClientController {
   private snapshot: WallpaperClientSnapshot = { status: 'idle', state: null, error: null, uploadLimitBytes: DEFAULT_UPLOAD_LIMIT_BYTES }
 
   constructor(options: WallpaperClientOptions = {}) {
-    this.fetcher = options.fetcher ?? fetch
+    this.fetcher = options.fetcher ?? globalThis.fetch.bind(globalThis)
     this.eventSource = options.eventSource ?? (url => new EventSource(url))
   }
 

@@ -42,3 +42,4 @@
 - Post-fix verification: 74/74 tests pass; coverage is 81.7% statements, 74.48% branches, 79.42% functions, and 88.46% lines; build and production audit pass.
 - Packed the final code and repeated the DSH rc.6 lifecycle smoke: state returned 200 with the 100 MiB limit header, the client module was present, attacker Host returned 403, and uninstall removed the plugin from composed config.
 - Final independent re-review found no blocking or important issues and concluded the plugin is deliverable; its targeted security/settings/controller/renderer rerun passed 26/26.
+- Fixed the real-browser `Illegal invocation` startup failure in 0.1.1 by preserving the native Window receiver for default `fetch`; added a regression test, passed 75/75 tests, rebuilt, and installed the 0.1.1 tarball into the user's default Web profile.

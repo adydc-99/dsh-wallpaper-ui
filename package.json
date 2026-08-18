@@ -1,6 +1,6 @@
 {
   "name": "dsh-wallpaper",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Persistent image, GIF, and video wallpapers for DeepSeek Harness Web UI",
   "license": "MIT",
   "type": "module",
