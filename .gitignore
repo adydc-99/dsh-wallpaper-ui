@@ -8,3 +8,4 @@ coverage/
 Thumbs.db
 .chrome-profile*/
 dom-dump*.html
+.pnpm-store/
