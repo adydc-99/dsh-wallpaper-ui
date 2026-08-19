@@ -79,6 +79,18 @@ function VideoWallpaper(props: {
   useEffect(() => {
     if (ref.current !== null) ref.current.playbackRate = props.presentation.playbackRate
   }, [props.presentation.playbackRate])
+  // Explicitly apply muted and kick playback: React's muted attribute is set
+  // during commit, which can race the browser's autoplay gate and leave the
+  // video frozen on its (often black) first frame.
+  useEffect(() => {
+    const video = ref.current
+    if (video === null) return
+    video.muted = props.presentation.muted
+    if (!props.reduceMotion) {
+      const playback = video.play()
+      if (playback !== undefined) void playback.catch(() => undefined)
+    }
+  }, [props.presentation.muted, props.reduceMotion])
   useEffect(() => {
     if (ref.current === null || previousReducedMotion.current === props.reduceMotion) return
     previousReducedMotion.current = props.reduceMotion
@@ -179,7 +191,11 @@ export function panelThemeTokens(opacity: number): ThemeTokenOverrides {
     '--dsw-alias-bg-base': { light: `rgba(248, 249, 251, ${String(alpha)})`, dark: `rgba(16, 16, 18, ${String(alpha)})` },
     '--dsw-alias-bg-layer-1': { light: `rgba(255, 255, 255, ${String(alpha)})`, dark: `rgba(22, 22, 24, ${String(alpha)})` },
     '--dsw-alias-bg-layer-2': { light: `rgba(248, 249, 251, ${String(alpha)})`, dark: `rgba(28, 28, 31, ${String(alpha)})` },
+    '--dsw-alias-bg-layer-3': { light: `rgba(248, 249, 251, ${String(alpha)})`, dark: `rgba(28, 28, 31, ${String(alpha)})` },
+    '--dsw-alias-bg-module-platform': { light: `rgba(245, 246, 248, ${String(alpha)})`, dark: `rgba(28, 28, 31, ${String(alpha)})` },
+    '--dsw-alias-bg-overlay': { light: `rgba(240, 241, 243, ${String(alpha)})`, dark: `rgba(32, 32, 36, ${String(alpha)})` },
     '--dsw-specific-sidebar-fill': { light: `rgba(248, 249, 251, ${String(alpha)})`, dark: `rgba(16, 16, 18, ${String(alpha)})` },
+    '--dsw-specific-menu': { light: `rgba(248, 249, 251, ${String(alpha)})`, dark: `rgba(28, 28, 31, ${String(alpha)})` },
   }
 }
 
