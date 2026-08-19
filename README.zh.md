@@ -1,46 +1,74 @@
-# dsh-wallpaper
+# dsh-wallpaper-ui
 
-这是一个原生、独立的 Cordis bundle，为 DeepSeek Harness Web UI 提供可持久保存的图片、GIF 与视频壁纸。
+[![npm version](https://img.shields.io/npm/v/dsh-wallpaper-ui)](https://www.npmjs.com/package/dsh-wallpaper-ui)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-## 环境要求
+这是一个原生、独立的 Cordis 插件，为 **DeepSeek Harness** Web UI 提供可持久保存的**图片、GIF 与视频壁纸**。
 
-- Node.js `^22.19.0 || >=24.0.0`
-- Web profile（客户端部分只在浏览器中运行）
+开箱即用：上传一张图片或视频，选中即可显示——默认面板透明度已调好，无需手动折腾滑块。
 
-| dsh-wallpaper | DeepSeek Harness |
-|---|---|
-| `0.1.x` | `0.1.0-rc.6` |
+## 功能特性
 
-## 从当前项目安装
+- 图片 / GIF / 视频壁纸（JPG、PNG、WebP、GIF、MP4、WebM）
+- 五种显示模式：铺满（cover）、包含（contain）、拉伸（stretch）、居中（center）、平铺（tile）
+- 支持本地上传 **和** HTTP(S) 网络 URL
+- 显示控制：壁纸透明度、亮度、模糊、遮罩颜色、面板透明度
+- 兼容 DeepSeek Harness `0.1.0-rc.6` 与 `0.1.0-rc.7`
+
+## 安装
+
+从 npm 软件源安装（推荐）：
+
+```sh
+dsh plugin add dsh-wallpaper-ui
+```
+
+从 GitHub 安装：
+
+```sh
+dsh plugin add https://github.com/adydc-99/dsh-wallpaper.git
+```
+
+从当前项目安装（开发调试）：
 
 ```sh
 pnpm install
 pnpm build
 cd ..
 dsh plugin --profile web add ./dsh-wallpaper
-dsh --profile web --dump-config
 dsh --profile web
 ```
 
-请在项目目录的上一级执行 `dsh plugin`；本地包参数必须指向插件项目，而不是 profile 目录本身。
-
-更新本地项目时，请拉取新版本后重新执行 `pnpm install` 和 `pnpm build`，再重启 DSH。若安装的是软件源发布版，可执行：
+更新已安装的软件源版本：
 
 ```sh
-dsh plugin --profile web update dsh-wallpaper
+dsh plugin --profile web update dsh-wallpaper-ui
 ```
 
-启动后打开“设置 → 壁纸”。本地上传支持 JPG、PNG、WebP、GIF、MP4、WebM，单文件上限为 100 MiB。网络壁纸只接受 HTTP(S) URL，并由浏览器直接加载，Host 不会代为下载。
-
-卸载命令：
+卸载：
 
 ```sh
-dsh plugin --profile web remove dsh-wallpaper
+dsh plugin --profile web remove dsh-wallpaper-ui
 ```
 
-卸载会移除路由、AI 工具、设置入口、主题覆盖、样式表和全局背景层。壁纸库仍保留在 `$DSH_HOME/plugins/dsh-wallpaper/v1`，只有用户手动删除该目录时才会清除。
+## 截图
 
-如需保留壁纸库与显示参数，请备份 `$DSH_HOME/plugins/dsh-wallpaper/v1`。
+<!-- TODO: 添加壁纸效果与设置面板的截图 -->
+
+## 使用说明
+
+1. 打开 **设置 → 壁纸**。
+2. 上传一张图片 / GIF / 视频，或添加 HTTP(S) 网络 URL。
+3. 选中壁纸条目——立即生效。
+4. 按需调整显示参数（壁纸透明度、面板透明度、显示模式等）。
+
+本地上传支持 JPG、PNG、WebP、GIF、MP4、WebM，单文件上限 100 MiB。
+
+## 兼容性
+
+| 插件 | DeepSeek Harness |
+|---|---|
+| `0.1.x` | `0.1.0-rc.6` / `0.1.0-rc.7` |
 
 ## 手动与 AI 权限
 
