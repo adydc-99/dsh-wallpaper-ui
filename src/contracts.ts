@@ -63,7 +63,7 @@ export const DEFAULT_PRESENTATION: Readonly<PresentationSettings> = Object.freez
   blurPx: 0,
   overlayColor: '#000000',
   overlayOpacity: 0.18,
-  panelOpacity: 0.86,
+  panelOpacity: 0.4,
   muted: true,
   playbackRate: 1,
 })

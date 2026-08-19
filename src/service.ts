@@ -254,10 +254,16 @@ export class WallpaperService {
     })
   }
 
-  /** Restore safe presentation defaults without deleting the library. */
+  /** Restore default display settings without deleting the library or changing the selection. */
   async resetPresentation(): Promise<WallpaperState> {
     return this.serial(async () => {
-      await this.publishState(this.nextState(this.state.wallpapers, { ...DEFAULT_PRESENTATION }))
+      const { enabled, selectedId, ...defaults } = DEFAULT_PRESENTATION
+      const presentation = {
+        ...defaults,
+        enabled: this.state.presentation.enabled,
+        selectedId: this.state.presentation.selectedId,
+      }
+      await this.publishState(this.nextState(this.state.wallpapers, presentation))
       return this.snapshot()
     })
   }
