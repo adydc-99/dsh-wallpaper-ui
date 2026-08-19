@@ -20,7 +20,7 @@ Out of the box: upload a picture or video, select it, and the wallpaper is immed
 From the npm registry (recommended):
 
 ```sh
-dsh plugin add dsh-wallpaper-ui
+dsh plugin --profile web add dsh-wallpaper-ui
 ```
 
 From GitHub:

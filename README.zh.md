@@ -20,7 +20,7 @@
 从 npm 软件源安装（推荐）：
 
 ```sh
-dsh plugin add dsh-wallpaper-ui
+dsh plugin --profile web add dsh-wallpaper-ui
 ```
 
 从 GitHub 安装：
