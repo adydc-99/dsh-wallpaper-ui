@@ -53,7 +53,9 @@ dsh plugin --profile web remove dsh-wallpaper-ui
 
 ## Screenshots
 
-<!-- TODO: add screenshots of the wallpaper in action and the settings panel -->
+![Wallpaper in action](assets/screenshot-1.png)
+
+![Wallpaper settings](assets/screenshot-2.png)
 
 ## Usage
 

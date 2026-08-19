@@ -53,7 +53,9 @@ dsh plugin --profile web remove dsh-wallpaper-ui
 
 ## 截图
 
-<!-- TODO: 添加壁纸效果与设置面板的截图 -->
+![壁纸效果](assets/screenshot-1.png)
+
+![设置面板](assets/screenshot-2.png)
 
 ## 使用说明
 
