@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.2 — 2026-08-18
+
+- "Restore defaults" now keeps the current wallpaper selection and only resets display settings, instead of disabling the wallpaper.
+- Lowered the default panel opacity from 0.86 to 0.4 so wallpapers are clearly visible out of the box.
+- Broadened panel background token overrides for newer Harness theme variants.
+- Explicitly apply video mute and start playback to avoid browser autoplay gate races.
+
 ## 0.1.1 — 2026-08-18
 
 - Fixed the browser client failing to initialize because the native `fetch` function lost its required Window receiver.

@@ -163,7 +163,14 @@ describe('wallpaper HTTP surface', () => {
     })).status).toBe(200)
     expect(service.snapshot().presentation).toMatchObject({ enabled: true, selectedId: 'wall-one', opacity: 0.35 })
     expect((await fetch(`${origin}/dsh-wallpaper/api/reset`, { method: 'POST', headers })).status).toBe(200)
-    expect(service.snapshot().presentation).toEqual(DEFAULT_PRESENTATION)
+    // Reset keeps the current selection and only restores display settings.
+    expect(service.snapshot().presentation).toMatchObject({
+      enabled: true,
+      selectedId: 'wall-one',
+      opacity: DEFAULT_PRESENTATION.opacity,
+      fit: DEFAULT_PRESENTATION.fit,
+      panelOpacity: DEFAULT_PRESENTATION.panelOpacity,
+    })
     expect((await fetch(`${origin}/dsh-wallpaper/api/wallpapers/wall-one`, { method: 'DELETE', headers })).status).toBe(204)
     expect(service.snapshot().wallpapers).toEqual([])
   })
